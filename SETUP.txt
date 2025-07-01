@@ -1,33 +1,69 @@
-Job Finder Agent Setup Instructions
-===================================
+Space Domain Agent Platform Setup Instructions
+================================================
 
 1. Create a file named ".env" in the project root directory
 
 2. Add the following content to the .env file:
 
-FIRECRAWL_API_KEY=
-OPENAI_API_KEY=
+OPENAI_API_KEY=your_openai_api_key_here
+NASA_API_KEY=your_nasa_api_key_here
+STAC_API_KEY=your_stac_api_key_here
 
 # Optional: Enable verbose output (defaults to false)
 # VERBOSE=true
 
-3. Install dependencies:
-   uv pip install -r pyproject.toml
-   or
-   pip install openai-agents python-dotenv rich
+3. Get your API keys:
+   - OpenAI API Key: https://platform.openai.com/api-keys
+   - NASA API Key: https://api.nasa.gov/ (instant signup, free)
+   - STAC API Key: Optional for most services
 
-4. Run the agent:
-   python main.py
+4. Install dependencies:
+   uv sync
+   or
+   pip install openai-agents python-dotenv rich httpx
+
+5. Make the orbital mechanics server executable:
+   chmod +x orbital_mechanics_server.py
+
+6. Run the platform:
+   uv run main.py
    
    # Or with verbose logging:
-   VERBOSE=true python main.py
+   VERBOSE=true uv run main.py
 
-The agent will:
-- Ask you to describe the kind of job you're looking for
-- Scrape Hacker News jobs page
-- Find the most fitting job based on your description
-- Present the job details to you 
+The platform offers three space domain agents:
+
+🚀 NASA Space Data Agent:
+- Astronomy Picture of the Day (APOD)
+- Mars rover photos and mission data  
+- Near Earth Objects (NEO) tracking
+- Earth satellite imagery
+- Space weather monitoring
+- Exoplanet discoveries
+- NASA's image and video library
+
+🌍 STAC Earth Observation Agent:
+- Landsat 8/9 multispectral imagery
+- Sentinel-1/2 radar and optical data
+- MODIS global monitoring data
+- Land use and climate analysis
+- Disaster response imagery
+
+🛰️ Orbital Mechanics Agent:
+- Real-time ISS position tracking
+- ISS pass time predictions
+- Satellite tracking with TLE data
+- Orbital period calculations
+- Space operations planning
 
 Logging Modes:
 - Default (quiet): Shows only agent responses and final results
-- Verbose: Shows tool calls, connection status, and intermediate steps 
+- Verbose: Shows tool calls, connection status, and intermediate steps
+
+Example Queries:
+- "Show me today's astronomy picture"
+- "Find Mars rover photos from Curiosity"
+- "Where is the ISS right now?"
+- "Get Landsat imagery of the Amazon"
+- "When will the ISS pass over my location?"
+- "What asteroids are approaching Earth?" 

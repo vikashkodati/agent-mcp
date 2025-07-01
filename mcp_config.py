@@ -5,59 +5,58 @@ from typing import Dict
 
 class MCPConfig:
     def __init__(self):
-        self.firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
-        if not self.firecrawl_api_key:
+        self.nasa_api_key = os.getenv("NASA_API_KEY")
+        if not self.nasa_api_key:
             raise ValueError(
-                "FIRECRAWL_API_KEY environment variable is not set")
+                "NASA_API_KEY environment variable is not set. Get your key from https://api.nasa.gov/")
 
-        self.tavily_api_key = os.getenv("TAVILY_API_KEY")
-        if not self.tavily_api_key:
-            raise ValueError(
-                "TAVILY_API_KEY environment variable is not set")
+        # Optional for some STAC services
+        self.stac_api_key = os.getenv("STAC_API_KEY", "")
 
-        self.firecrawl_url = f"https://mcp.firecrawl.dev/{self.firecrawl_api_key}/sse"
-        self.bootcamp_url = "https://agent-engineering-bootcamp-mcp.vercel.app/sse"
-
-    def get_firecrawl_params(self):
-        return {
-            "url": self.firecrawl_url,
-        }
-
-    def get_bootcamp_params(self):
-        return {
-            "url": self.bootcamp_url,
-        }
-
-    def get_tavily_params(self):
+    def get_nasa_params(self):
         return {
             "command": "npx",
-            "args": ["-y", "tavily-mcp@0.2.4"],
-            "env": {"TAVILY_API_KEY": self.tavily_api_key}
+            "args": ["-y", "@programcomputer/nasa-mcp-server@latest"],
+            "env": {"NASA_API_KEY": self.nasa_api_key}
+        }
+
+    def get_stac_params(self):
+        return {
+            "command": "npx",
+            "args": ["-y", "stac-mcp-server@latest"],
+            "env": {
+                "STAC_API_KEY": self.stac_api_key if self.stac_api_key else ""
+            }
+        }
+
+    def get_orbital_mechanics_params(self):
+        return {
+            "command": "python",
+            "args": ["orbital_mechanics_server.py"],
+            "env": {}
         }
 
     async def create_servers(self):
-        firecrawl_server = MCPServerSse(
+        nasa_server = MCPServerStdio(
             cache_tools_list=True,
-            name="Firecrawl MCP",
-            params=self.get_firecrawl_params(),
-            client_session_timeout_seconds=60
+            name="NASA MCP Server",
+            params=self.get_nasa_params(),
         )
 
-        bootcamp_server = MCPServerSse(
+        stac_server = MCPServerStdio(
             cache_tools_list=True,
-            name="Agent Engineering Bootcamp MCP",
-            params=self.get_bootcamp_params(),
-            client_session_timeout_seconds=15
+            name="STAC MCP Server", 
+            params=self.get_stac_params(),
         )
 
-        tavily_server = MCPServerStdio(
+        orbital_server = MCPServerStdio(
             cache_tools_list=True,
-            name="Tavily MCP",
-            params=self.get_tavily_params(),
+            name="Orbital Mechanics MCP Server",
+            params=self.get_orbital_mechanics_params(),
         )
 
         return {
-            "firecrawl": firecrawl_server,
-            "bootcamp": bootcamp_server,
-            "tavily": tavily_server
+            "nasa": nasa_server,
+            "stac": stac_server,
+            "orbital": orbital_server
         }

@@ -16,10 +16,9 @@ from rich.text import Text
 
 from agents import set_tracing_disabled
 from agents.exceptions import OutputGuardrailTripwireTriggered
-from agent import JobFinderAgent
-from bootcamp_agent import BootcampAgent
-from web_search_agent import WebSearchAgent
-from agent_guardrails import bootcamp_relevance_guardrail
+from nasa_agent import NASAAgent
+from stac_agent import STACAgent
+from orbital_agent import OrbitalAgent
 from mcp_config import MCPConfig
 from logging_utils import LoggingUtils
 
@@ -54,9 +53,9 @@ def getch():
 
 def display_agent_menu(console: Console):
     agents = [
-        ("Job Finder Agent", "Find relevant job opportunities"),
-        ("Bootcamp Agent", "Agent Engineering Bootcamp Assistant"),
-        ("Web Search Agent", "Search the web for any information"),
+        ("NASA Space Data Agent", "Explore NASA's vast space and astronomy data"),
+        ("STAC Earth Observation Agent", "Analyze satellite imagery and Earth observation data"),
+        ("Orbital Mechanics Agent", "Track satellites and perform orbital calculations"),
         ("Quit", "Exit the application")
     ]
 
@@ -66,13 +65,13 @@ def display_agent_menu(console: Console):
     while True:
         console.clear()
         console.print(Panel.fit(
-            "[bold cyan]Agent Assistant Platform[/bold cyan]",
+            "[bold cyan]🚀 Space Domain Agent Platform[/bold cyan]",
             border_style="cyan"
         ))
 
         if interactive_mode:
             console.print(
-                "\n[bold]Choose an agent (use ↑↓ arrows, Enter to select):[/bold]")
+                "\n[bold]Choose a space domain agent (use ↑↓ arrows, Enter to select):[/bold]")
 
             for i, (name, description) in enumerate(agents):
                 if i == selected:
@@ -85,11 +84,11 @@ def display_agent_menu(console: Console):
             console.print(
                 "\n[dim]Use ↑/↓ arrows to navigate, Enter to select, 'q' to quit[/dim]")
         else:
-            console.print("\n[bold]Choose an agent:[/bold]")
+            console.print("\n[bold]Choose a space domain agent:[/bold]")
             for i, (name, description) in enumerate(agents):
                 console.print(f"[yellow]{i+1}[/yellow]. {name} - [dim]{description}[/dim]")
             console.print("[yellow]q[/yellow]. Quit")
-            console.print("\n[dim]Enter your choice (1, 2, or q):[/dim]")
+            console.print("\n[dim]Enter your choice (1, 2, 3, or q):[/dim]")
 
         key = getch()
 
@@ -137,15 +136,19 @@ async def main():
 
         if choice == "q":
             console.print(
-                "\n[bold yellow]Thanks for using Agent Assistant Platform! Goodbye! 👋[/bold yellow]")
+                "\n[bold yellow]Thanks for using Space Domain Agent Platform! 🚀 Goodbye! 👋[/bold yellow]")
             return
 
         if choice == "1":
-            agent_name = "Job Finder Agent"
+            agent_name = "NASA Space Data Agent"
+            server_key = "nasa"
         elif choice == "2":
-            agent_name = "Bootcamp Agent"
+            agent_name = "STAC Earth Observation Agent"
+            server_key = "stac"
         else:
-            agent_name = "Web Search Agent"
+            agent_name = "Orbital Mechanics Agent"
+            server_key = "orbital"
+            
         logger.print_welcome(agent_name)
 
         mcp_config = MCPConfig()
@@ -153,73 +156,54 @@ async def main():
 
         servers = await mcp_config.create_servers()
         
-        if choice == "3":  # Web Search Agent
-            async with servers["tavily"] as tavily_server:
-                logger.print_connected()
-                
-                web_search_agent = WebSearchAgent(
-                    mcp_servers=[tavily_server], verbose=VERBOSE)
-                
-                selected_agent = web_search_agent
-                
-                while True:
-                    user_input = Prompt.ask(
-                        f"\n[bold green]What can I help you with today? (type 'quit' to exit)[/bold green]")
+        async with servers[server_key] as active_server:
+            logger.print_connected()
+            
+            # Create the appropriate agent based on user choice
+            if choice == "1":
+                selected_agent = NASAAgent(
+                    mcp_servers=[active_server], verbose=VERBOSE)
+            elif choice == "2":
+                selected_agent = STACAgent(
+                    mcp_servers=[active_server], verbose=VERBOSE)
+            else:
+                selected_agent = OrbitalAgent(
+                    mcp_servers=[active_server], verbose=VERBOSE)
+            
+            while True:
+                user_input = Prompt.ask(
+                    f"\n[bold green]What can I help you explore today? (type 'quit' to exit)[/bold green]")
 
-                    if user_input.lower().strip() in ['quit', 'exit', 'q']:
-                        logger.console.print(
-                            "\n[bold yellow]Thanks for using Agent Assistant Platform! Goodbye! 👋[/bold yellow]")
-                        break
+                if user_input.lower().strip() in ['quit', 'exit', 'q']:
+                    logger.console.print(
+                        "\n[bold yellow]Thanks for using Space Domain Agent Platform! 🚀 Goodbye! 👋[/bold yellow]")
+                    break
 
+                try:
                     await selected_agent.find_answer(user_input)
-        else:
-            async with servers["firecrawl"] as firecrawl_server, servers["bootcamp"] as bootcamp_server:
-                logger.print_connected()
-
-                job_finder = JobFinderAgent(
-                    mcp_servers=[firecrawl_server], verbose=VERBOSE)
-
-                bootcamp_agent = BootcampAgent(
-                    mcp_servers=[bootcamp_server],
-                    verbose=VERBOSE,
-                    output_guardrails=[bootcamp_relevance_guardrail]
-                )
-
-                selected_agent = job_finder if choice == "1" else bootcamp_agent
-
-                while True:
-                    user_input = Prompt.ask(
-                        f"\n[bold green]What can I help you with today? (type 'quit' to exit)[/bold green]")
-
-                    if user_input.lower().strip() in ['quit', 'exit', 'q']:
-                        logger.console.print(
-                            "\n[bold yellow]Thanks for using Agent Assistant Platform! Goodbye! 👋[/bold yellow]")
-                        break
-
-                    try:
-                        await selected_agent.find_answer(user_input)
-                    except OutputGuardrailTripwireTriggered as e:
-                        logger.console.print("\n" + "━" * 60)
-                        logger.console.print(
-                            "⚠️  [bold red]GUARDRAIL ACTIVATED[/bold red] ⚠️", justify="center")
-                        logger.console.print("━" * 60)
-                        logger.console.print(
-                            "\n[bold red]❌ This response is not related to the Agent Engineering Bootcamp.[/bold red]")
-                        logger.console.print("\n" + "━" * 60)
-                        if VERBOSE:
-                            logger.console.print(f"[dim]Debug info: {e}[/dim]")
+                except OutputGuardrailTripwireTriggered as e:
+                    logger.console.print("\n" + "━" * 60)
+                    logger.console.print(
+                        "⚠️  [bold red]GUARDRAIL ACTIVATED[/bold red] ⚠️", justify="center")
+                    logger.console.print("━" * 60)
+                    logger.console.print(
+                        "\n[bold red]❌ This response is not related to space domain topics.[/bold red]")
+                    logger.console.print("\n" + "━" * 60)
+                    if VERBOSE:
+                        logger.console.print(f"[dim]Debug info: {e}[/dim]")
 
     except ValueError as e:
-        logger.console.print(f"[bold red]Error: {str(e)}[/bold red]")
-        if "FIRECRAWL_API_KEY" in str(e):
-            logger.console.print(
-                "Please ensure FIRECRAWL_API_KEY is set in your .env file")
-        elif "TAVILY_API_KEY" in str(e):
-            logger.console.print(
-                "Please ensure TAVILY_API_KEY is set in your .env file")
+        console.print(f"\n[bold red]Configuration Error:[/bold red] {e}")
+        console.print("\n[yellow]Please check your environment variables and try again.[/yellow]")
+        console.print("\n[dim]Required environment variables:[/dim]")
+        console.print("[dim]- OPENAI_API_KEY (from platform.openai.com)[/dim]")
+        console.print("[dim]- NASA_API_KEY (from api.nasa.gov)[/dim]")
+        console.print("[dim]- STAC_API_KEY (optional, for some STAC services)[/dim]")
     except Exception as e:
-        logger.console.print(
-            f"[bold red]An unexpected error occurred: {str(e)}[/bold red]")
+        console.print(f"\n[bold red]Error:[/bold red] {e}")
+        if VERBOSE:
+            import traceback
+            console.print(f"[dim]{traceback.format_exc()}[/dim]")
 
 
 if __name__ == "__main__":

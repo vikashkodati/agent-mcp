@@ -1,7 +1,7 @@
 [project]
 name = "agent-mcp"
 version = "0.1.0"
-description = "Job finder agent using OpenAI Agents SDK and Firecrawl MCP"
+description = "Space Domain Agent Platform using OpenAI Agents SDK and MCP servers for NASA, STAC, and Orbital Mechanics"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -9,4 +9,5 @@ dependencies = [
     "python-dotenv",
     "asyncio",
     "rich",
+    "httpx",
 ]
